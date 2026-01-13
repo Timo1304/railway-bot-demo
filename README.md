@@ -1,6 +1,6 @@
 # Discord ⇄ Web Realtime Relay
 
-A full-stack event pipeline that streams Discord messages to a web interface in real-time. Built to demonstrate **Support Engineering as Systems Engineering**—taking a support problem (visibility) and solving it with robust infrastructure.
+A full-stack event pipeline that streams Discord messages to a web interface in real-time. Built to demonstrate **Support Engineering as Systems Engineering**-taking a support problem (visibility) and solving it with robust infrastructure.
 
 ## 🏗 The Architecture: "The Realtime Relay"
 
@@ -9,7 +9,7 @@ This is not a monolithic script; it is a decoupled microservices architecture de
 ### The Stack
 - **Ingestion (The Ear):** Node.js + Discord.js (Gateway API)
 - **Persistence & Broadcast (The Brain):** Supabase (PostgreSQL + Realtime)
-- **Presentation (The Face):** Next.js 15 (App Router) + Tailwind CSS
+- **Presentation (The Face):** Next.js 16 (App Router) + Tailwind CSS
 - **Infrastructure:** Deployed on Railway as a Monorepo (Worker Service + Web Service)
 
 ### How it Works
