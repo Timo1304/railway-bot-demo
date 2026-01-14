@@ -106,10 +106,16 @@ Production would gate access via Discord OAuth + role checks.
 Messages sent while the worker is offline are currently missed.<br />
 A production version would fetch channel history on boot to close gaps.
 
- Latency
+- Latency
 
 Discord ➜ Bot ➜ DB ➜ Client adds a small hop.<br />
 For support observability, sub-100ms latency is acceptable and predictable.
+
+- Client-Side Scalability (Unbounded List)
+
+Current State: The frontend renders the entire message history in the DOM.
+Limitation: Long-running sessions in high-volume channels will eventually cause memory exhaustion (DOM)
+Production Fix: Implement "Windowing" (e.g `react-window`) or "Cursor-based Pagination" to only render visible nodes.
 
 ---
 
