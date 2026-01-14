@@ -1,48 +1,202 @@
-# Discord ⇄ Web Realtime Relay
+# ⚡ Discord Live-Stream — Low-Latency Support Observer
 
-A full-stack event pipeline that streams Discord messages to a web interface in real-time. Built to demonstrate **Support Engineering as Systems Engineering**-taking a support problem (visibility) and solving it with robust infrastructure.
+<blockquote>
+  <p><strong>A forensic observability pipeline that bridges internal Ops (Discord) with external visibility (Web).</strong></p>
+</blockquote>
 
-## 🏗 The Architecture: "The Realtime Relay"
+This project is <strong>not a chat bot</strong>.<br />
+It is a <strong>real-time event ingestion and observability system</strong> designed to demonstrate disciplined
+full-stack engineering and production-aware trade-offs.
 
-This is not a monolithic script; it is a decoupled microservices architecture designed for resilience.
+It solves a classic Support problem:
 
-### The Stack
-- **Ingestion (The Ear):** Node.js + Discord.js (Gateway API)
-- **Persistence & Broadcast (The Brain):** Supabase (PostgreSQL + Realtime)
-- **Presentation (The Face):** Next.js 16 (App Router) + Tailwind CSS
-- **Infrastructure:** Deployed on Railway as a Monorepo (Worker Service + Web Service)
+<blockquote>
+  <p><strong>“How do we observe the support queue in real time without being logged into the admin platform?”</strong></p>
+</blockquote>
 
-### How it Works
-1.  **Ingest:** The Bot service sits as a background worker on Railway. It maintains a persistent WebSocket connection to the Discord Gateway (using the `MessageContent` intent).
-2.  **Sanitize & Store:** When a message arrives, the bot upserts it into Supabase using a unique `discord_message_id`. This ensures **idempotency**—if the bot restarts and re-fetches messages, we don't get duplicates.
-3.  **Broadcast:** Supabase detects the `INSERT` event and broadcasts the payload via WebSockets to the `realtime-messages` channel.
-4.  **Render:** The Next.js frontend is subscribed to this channel. It receives the JSON payload and updates the DOM instantly without a page refresh or heavy polling.
+---
 
-## 🤔 Alternatives Considered
+## 🧭 What This System Does
 
-### 1. The "Happy Path" (Next.js API Routes)
-* **Idea:** Run the bot instance inside a Next.js API route.
-* **Why Rejected:** Next.js is serverless/ephemeral. A Discord bot requires a continuous process. Spawning a bot per request leads to "Zombie Processes" and rate-limiting from Discord.
+- Listens to live Discord events via the Gateway  
+- Sanitizes and persists messages into a durable store  
+- Broadcasts updates to a web client in real time  
+- Retains history even if the ingestion service crashes  
 
-### 2. Direct HTTP Webhooks
-* **Idea:** Use Discord Webhooks to push data to an endpoint.
-* **Why Rejected:** Webhooks are passive. They generally rely on Slash Commands (`/command`) interactions. The prompt required streaming *all* messages from a channel, which requires an active Gateway connection.
+<strong>The result:</strong> a live, read-only support stream accessible from the web, with zero refresh and no admin access required.
 
-### 3. Direct WebSocket (Bot ➔ Frontend)
-* **Idea:** Have the Node.js bot host a `ws` server and have the frontend connect directly.
-* **Why Rejected:** Tight coupling. If the bot crashes, the frontend loses state. By decoupling via Supabase, the frontend can still load historical data even if the ingestion worker is down.
+---
+🧱 The Stack (The “Railway Standard”)
+Ingestion (The Ear)
 
-## 🐛 Known Limitations & Trade-offs
+Node.js + Discord.js (Gateway Intents)
 
-* **Public Read Access:** Currently, the RLS (Row Level Security) policy allows `public` read access. In a production internal tool, this should be gated behind an auth provider (like Discord OAuth).
-* **Edge Case Latency:** While Supabase Realtime is fast, there is a minor hop (Discord ➔ Bot ➔ DB ➔ Frontend). For high-frequency trading, this would be slow; for support logs, it's instant.
-* **Bot Restart Gaps:** If the bot service is down for an extended period, messages sent during that downtime are not currently "backfilled" automatically upon restart (though `fetchHistory` grabs the latest state on page load).
+Running as a persistent Worker
 
-## 🚀 How to Run Locally
+State & Sync (The Brain)
 
-1.  **Clone:** `git clone <repo_url>`
-2.  **Install:** `npm install`
-3.  **Keys:** Add `.env.local` with Supabase & Discord credentials.
-4.  **Run:**
-    * Terminal 1 (Site): `npm run dev`
-    * Terminal 2 (Bot): `npx tsx bot/bot.ts`
+Supabase
+
+PostgreSQL for persistence
+
+Realtime engine for fan-out
+
+Presentation (The Face)
+
+Next.js 16 (App Router)
+
+Tailwind CSS
+
+Infrastructure
+
+Monorepo deployed on Railway
+---
+🧠 Engineering Decisions & Trade-offs
+
+This system is built with failure in mind.
+
+1. Persistence Layer — Why Supabase?
+
+<strong>Decision:</strong> Supabase instead of direct Bot ➜ Client WebSockets
+
+<strong>Why:</strong>
+
+Full decoupling between ingestion and presentation
+
+No data loss if the worker crashes or restarts
+
+Enables history hydration + live updates from a single source of truth
+
+A direct socket would drop all state the moment the worker dies.
+
+---
+2. Execution Model — Why a Worker?
+
+<strong>Decision:</strong> Dedicated background Worker instead of a Next.js API route
+
+<strong>Why:</strong>
+
+Discord bots require a persistent heartbeat
+
+Serverless functions are ephemeral by design
+
+Running a bot inside API routes causes zombie processes and rate-limit failures
+
+The worker runs independently of web traffic and deployment cycles.
+
+---
+3. Idempotency — Solving the “Duplicate Event” Problem
+
+<strong>Decision:</strong> UPSERT using discord_message_id as the primary key
+
+<strong>Why:</strong>
+
+Network retries and gateway reconnects happen
+
+Packet replays must not create duplicate records
+
+Processing the same event twice always results in <strong>one database row</strong>.
+
+---
+🐛 Production Considerations (Forensic Audit)
+
+If this were deployed for enterprise support teams, the next hardening steps would be:
+
+Security (RLS)
+
+Currently public for demo speed.
+Production would gate access via Discord OAuth + role checks.
+
+Backfill Logic
+
+Messages sent while the worker is offline are currently missed.<br />
+A production version would fetch channel history on boot to close gaps.
+
+Latency
+
+Discord ➜ Bot ➜ DB ➜ Client adds a small hop.<br />
+For support observability, sub-100ms latency is acceptable and predictable.
+
+---
+🚀 Local Setup (Forensic Mode)
+Prerequisites
+
+Node.js v18+
+
+Supabase project
+
+Discord bot token
+
+---
+git clone https://github.com/YOUR_USERNAME/railway-forensic-bot.git
+</br>
+cd railway-forensic-bot
+</br>
+npm install
+---
+Environment Configuration
+
+Create a .env file from .env.example:
+# Discord
+DISCORD_TOKEN=your_discord_bot_token_here
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+---
+Dual-Process Startup (By Design)
+
+Because the system is decoupled, <strong>two processes must run simultaneously</strong>.
+
+<strong>Terminal 1 — Web Interface</strong>
+
+npm run dev
+---
+<strong>Terminal 2 — Ingestion Worker</strong>
+
+npx tsx src/bot/index.ts
+
+Verification
+
+Open http://localhost:3000
+
+Send a message in your Discord server
+
+Watch it appear instantly in the web UI — no refresh required
+
+---
+
+🧩 Why This Project Exists
+
+This repository is a <strong>signal</strong>, not a product.
+
+Demonstrates real-time systems thinking
+
+Shows production-aware trade-offs
+
+Treats support infrastructure as first-class engineering
+
+<blockquote> <p><strong>Support is not tickets — it’s telemetry.</strong></p> </blockquote> 
+---
+
+## 🏗 System Architecture
+
+The system follows a <strong>Decoupled Event-Driven Architecture</strong>.<br />
+The ingestion layer (Discord Worker) and presentation layer (Web) are fully independent, linked only by a real-time database.
+
+<strong>Mermaid Diagram</strong>
+
+```mermaid
+sequenceDiagram
+    participant D as Discord Gateway
+    participant B as Worker (Node.js)
+    participant S as Supabase (DB + Realtime)
+    participant C as Web Client (Next.js)
+
+    D->>B: WebSocket Event (MessageCreate)
+    Note over B: Sanitize & Structure Payload
+    B->>S: UPSERT (Idempotent Write)
+    S-->>C: Realtime Broadcast (INSERT)
+    Note over C: Hydrate DOM (Zero Refresh)
+```
