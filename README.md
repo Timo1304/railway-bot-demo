@@ -133,33 +133,41 @@ This repository is a <strong>signal</strong>, not a product.
 
 ---
 
-###  🚀 Local Setup (Forensic Mode)
-Prerequisites
+### 🚀 Local Setup (Forensic Mode)
 
+**Prerequisites**
 - Node.js v18+
-
 - Supabase project
-
 - Discord bot token
 
----
-git clone https://github.com/YOUR_USERNAME/railway-forensic-bot.git
-</br>
-cd railway-forensic-bot
-</br>
+```bash
+# 1. Clone the repository
+git clone https://github.com/Timo1304/railway-bot-demo.git
+cd railway-bot-demo
+
+# 2. Install dependencies
 npm install
+```
+
 ---
+
 # Environment Configuration
 
-Create a .env file from .env.example:
+Create a `.env` (or `.env.local`) file in the root directory:
 
-# Discord
-DISCORD_TOKEN=your_discord_bot_token_here
+## Discord
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
 
-# Supabase
+DISCORD_CHANNEL_ID=your_channel_id_here
+### (Right-click a text channel in Discord > Copy Channel ID. Requires Developer Mode ON)
+
+## Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-</br>
+
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+### (Required for the worker to bypass RLS and perform upserts)
 
 ---
 # Dual-Process Startup (By Design)
@@ -167,12 +175,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 Because the system is decoupled, <strong>two processes must run simultaneously</strong>.
 
 <strong>Terminal 1 — Web Interface</strong>
-
+```bash
 npm run dev
+```
+
 ---
 <strong>Terminal 2 — Ingestion Worker</strong>
-
-npx tsx src/bot/index.ts
+```bash
+npx tsx bot/bot.ts
+```
 
 # Verification
 
