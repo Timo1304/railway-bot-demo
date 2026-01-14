@@ -26,32 +26,26 @@ It solves a classic Support problem:
 <strong>The result:</strong> a live, read-only support stream accessible from the web, with zero refresh and no admin access required.
 
 ---
-🧱 The Stack (The “Railway Standard”)
-Ingestion (The Ear)
+## 🧱 The Stack (The “Railway Standard”)
 
-Node.js + Discord.js (Gateway Intents)
+### Ingestion (The Ear)
+- Node.js + Discord.js (Gateway Intents)
+- Running as a persistent Worker
 
-Running as a persistent Worker
+### State & Sync (The Brain)
+- Supabase
+- PostgreSQL for persistence
+- Realtime engine for fan-out
 
-State & Sync (The Brain)
+### Presentation (The Face)
+- Next.js 16 (App Router)
+- Tailwind CSS
 
-Supabase
+### Infrastructure
+- Monorepo deployed on Railway
 
-PostgreSQL for persistence
-
-Realtime engine for fan-out
-
-Presentation (The Face)
-
-Next.js 16 (App Router)
-
-Tailwind CSS
-
-Infrastructure
-
-Monorepo deployed on Railway
 ---
-🧠 Engineering Decisions & Trade-offs
+### 🧠 Engineering Decisions & Trade-offs
 
 This system is built with failure in mind.
 
@@ -61,71 +55,86 @@ This system is built with failure in mind.
 
 <strong>Why:</strong>
 
-Full decoupling between ingestion and presentation
+- Full decoupling between ingestion and presentation
 
-No data loss if the worker crashes or restarts
+- No data loss if the worker crashes or restarts
 
-Enables history hydration + live updates from a single source of truth
+- Enables history hydration + live updates from a single source of truth
 
-A direct socket would drop all state the moment the worker dies.
+- A direct socket would drop all state the moment the worker dies.
 
 ---
-2. Execution Model — Why a Worker?
+### 2. Execution Model — Why a Worker?
 
 <strong>Decision:</strong> Dedicated background Worker instead of a Next.js API route
 
 <strong>Why:</strong>
 
-Discord bots require a persistent heartbeat
+- Discord bots require a persistent heartbeat
 
-Serverless functions are ephemeral by design
+- Serverless functions are ephemeral by design
 
-Running a bot inside API routes causes zombie processes and rate-limit failures
+- Running a bot inside API routes causes zombie processes and rate-limit failures
 
-The worker runs independently of web traffic and deployment cycles.
+- The worker runs independently of web traffic and deployment cycles.
 
 ---
-3. Idempotency — Solving the “Duplicate Event” Problem
+### 3. Idempotency — Solving the “Duplicate Event” Problem
 
 <strong>Decision:</strong> UPSERT using discord_message_id as the primary key
 
 <strong>Why:</strong>
 
-Network retries and gateway reconnects happen
+- Network retries and gateway reconnects happen
 
-Packet replays must not create duplicate records
+- Packet replays must not create duplicate records
 
-Processing the same event twice always results in <strong>one database row</strong>.
+- Processing the same event twice always results in <strong>one database row</strong>.
 
 ---
-🐛 Production Considerations (Forensic Audit)
+### 🐛 Production Considerations (Forensic Audit)
 
 If this were deployed for enterprise support teams, the next hardening steps would be:
 
-Security (RLS)
+- Security (RLS)
 
 Currently public for demo speed.
 Production would gate access via Discord OAuth + role checks.
 
-Backfill Logic
+- Backfill Logic
 
 Messages sent while the worker is offline are currently missed.<br />
 A production version would fetch channel history on boot to close gaps.
 
-Latency
+ Latency
 
 Discord ➜ Bot ➜ DB ➜ Client adds a small hop.<br />
 For support observability, sub-100ms latency is acceptable and predictable.
 
 ---
-🚀 Local Setup (Forensic Mode)
+
+### 🧩 Why This Project Exists
+
+This repository is a <strong>signal</strong>, not a product.
+
+- Demonstrates real-time systems thinking
+
+- Shows production-aware trade-offs
+
+- Treats support infrastructure as first-class engineering
+
+<blockquote> <p><strong>Support is not tickets — it’s telemetry.</strong></p> </blockquote> 
+
+---
+
+###  🚀 Local Setup (Forensic Mode)
 Prerequisites
 
-Node.js v18+
+- Node.js v18+
 
-Supabase project
+- Supabase project
 
-Discord bot token
+- Discord bot token
 
 ---
 git clone https://github.com/YOUR_USERNAME/railway-forensic-bot.git
@@ -134,18 +143,20 @@ cd railway-forensic-bot
 </br>
 npm install
 ---
-Environment Configuration
+# Environment Configuration
 
 Create a .env file from .env.example:
+
 # Discord
 DISCORD_TOKEN=your_discord_bot_token_here
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+</br>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
-Dual-Process Startup (By Design)
+# Dual-Process Startup (By Design)
 
 Because the system is decoupled, <strong>two processes must run simultaneously</strong>.
 
@@ -157,27 +168,14 @@ npm run dev
 
 npx tsx src/bot/index.ts
 
-Verification
+# Verification
 
-Open http://localhost:3000
+- Open http://localhost:3000
 
-Send a message in your Discord server
+- Send a message in your Discord server
 
-Watch it appear instantly in the web UI — no refresh required
+- Watch it appear instantly in the web UI — no refresh required
 
----
-
-🧩 Why This Project Exists
-
-This repository is a <strong>signal</strong>, not a product.
-
-Demonstrates real-time systems thinking
-
-Shows production-aware trade-offs
-
-Treats support infrastructure as first-class engineering
-
-<blockquote> <p><strong>Support is not tickets — it’s telemetry.</strong></p> </blockquote> 
 ---
 
 ## 🏗 System Architecture
