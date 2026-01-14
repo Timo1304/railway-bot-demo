@@ -1,5 +1,7 @@
 # ⚡ Discord Live-Stream — Low-Latency Support Observer
 
+> 🔴 **[VIEW LIVE DEMO](https://railway-bot-demo-production.up.railway.app/)** — *Zero-refresh observability stream*
+
 <blockquote>
   <p><strong>A forensic observability pipeline that bridges internal Ops (Discord) with external visibility (Web).</strong></p>
 </blockquote>
